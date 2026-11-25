@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #1d4ed8;
+}
+
+body {
+  font-family: Inter, "Noto Sans Devanagari", system-ui, sans-serif;
+  background: #f8fafc;
+}

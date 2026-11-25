@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  NURSE
+  DESK
+  DOCTOR
+  HOUSEKEEPING
+  VIEWER
+}
+
+enum WardGender {
+  MALE
+  FEMALE
+  ANY
+}
+
+enum BedType {
+  GENERAL
+  OXYGEN
+  VENTILATOR
+  ICU
+  COT
+  ISOLATION
+}
+
+enum BedStatus {
+  FREE
+  RESERVED
+  OCCUPIED
+  DISCHARGE_PLANNED
+  CLEANING
+  BLOCKED
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Outcome {
+  DISCHARGED
+  LAMA
+  REFERRED
+  DIED
+}
+
+model Hospital {
+  id                String  @id @default(cuid())
+  name              String
+  hfrId             String? @map("hfr_id")
+  timezone          String  @default("Asia/Kolkata")
+  publicPageEnabled Boolean @default(false) @map("public_page_enabled")
+
+  @@map("hospital")
+}
+
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  phone        String  @unique
+  passwordHash String  @map("password_hash")
+  pinHash      String? @map("pin_hash")
+  role         Role
+  active       Boolean @default(true)
+
+  wards     UserWard[]
+  transfers BedTransfer[]
+  bedEvents BedEvent[]
+  auditLogs AuditLog[]
+
+  @@map("user")
+}
+
+model UserWard {
+  userId String @map("user_id")
+  wardId String @map("ward_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ward   Ward   @relation(fields: [wardId], references: [id], onDelete: Cascade)
+
+  @@id([userId, wardId])
+  @@map("user_ward")
+}
+
+model Ward {
+  id        String     @id @default(cuid())
+  name      String
+  gender    WardGender @default(ANY)
+  floor     Int        @default(0)
+  specialty String?
+  sortOrder Int        @default(0) @map("sort_order")
+  active    Boolean    @default(true)
+
+  beds   Bed[]
+  users  UserWard[]
+  census CensusSnapshot[]
+
+  @@map("ward")
+}
+
+model Bed {
+  id                 String    @id @default(cuid())
+  wardId             String    @map("ward_id")
+  label              String
+  bedType            BedType   @default(GENERAL) @map("bed_type")
+  status             BedStatus @default(FREE)
+  statusReason       String?   @map("status_reason")
+  statusChangedAt    DateTime  @default(now()) @map("status_changed_at")
+  reservedUntil      DateTime? @map("reserved_until")
+  reservedBy         String?   @map("reserved_by")
+  currentAdmissionId String?   @unique @map("current_admission_id")
+  version            Int       @default(0)
+
+  ward             Ward          @relation(fields: [wardId], references: [id])
+  currentAdmission Admission?    @relation("CurrentAdmission", fields: [currentAdmissionId], references: [id])
+  admissions       Admission[]   @relation("AdmissionBed")
+  transfersFrom    BedTransfer[] @relation("TransferFrom")
+  transfersTo      BedTransfer[] @relation("TransferTo")
+  events           BedEvent[]
+
+  @@unique([wardId, label])
+  @@index([status])
+  @@index([wardId, bedType, status])
+  @@map("bed")
+}
+
+model Patient {
+  id         String  @id @default(cuid())
+  uhid       String
+  name       String
+  age        Int
+  sex        Sex
+  phone      String?
+  abhaNumber String? @map("abha_number")
+  anonymised Boolean @default(false)
+
+  admissions Admission[]
+
+  @@index([uhid])
+  @@map("patient")
+}
+
+model Admission {
+  id                  String    @id @default(cuid())
+  patientId           String    @map("patient_id")
+  bedId               String    @map("bed_id")
+  admittingDoctor     String    @map("admitting_doctor")
+  admittedAt          DateTime  @default(now()) @map("admitted_at")
+  dischargePlannedFor DateTime? @map("discharge_planned_for")
+  dischargeOrderAt    DateTime? @map("discharge_order_at")
+  summaryReadyAt      DateTime? @map("summary_ready_at")
+  billClearedAt       DateTime? @map("bill_cleared_at")
+  medsGivenAt         DateTime? @map("meds_given_at")
+  leftAt              DateTime? @map("left_at")
+  outcome             Outcome?
+
+  patient    Patient       @relation(fields: [patientId], references: [id])
+  bed        Bed           @relation("AdmissionBed", fields: [bedId], references: [id])
+  currentFor Bed?          @relation("CurrentAdmission")
+  transfers  BedTransfer[]
+
+  @@index([bedId])
+  @@index([leftAt])
+  @@map("admission")
+}
+
+model BedTransfer {
+  id          String   @id @default(cuid())
+  admissionId String   @map("admission_id")
+  fromBedId   String   @map("from_bed_id")
+  toBedId     String   @map("to_bed_id")
+  at          DateTime @default(now())
+  byUserId    String   @map("by_user_id")
+
+  admission Admission @relation(fields: [admissionId], references: [id])
+  fromBed   Bed       @relation("TransferFrom", fields: [fromBedId], references: [id])
+  toBed     Bed       @relation("TransferTo", fields: [toBedId], references: [id])
+  byUser    User      @relation(fields: [byUserId], references: [id])
+
+  @@map("bed_transfer")
+}
+
+model BedEvent {
+  id          String    @id @default(cuid())
+  bedId       String    @map("bed_id")
+  fromStatus  BedStatus @map("from_status")
+  toStatus    BedStatus @map("to_status")
+  actorUserId String?   @map("actor_user_id")
+  at          DateTime  @default(now())
+  note        String?
+
+  bed   Bed   @relation(fields: [bedId], references: [id])
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([bedId, at])
+  @@map("bed_event")
+}
+
+model CensusSnapshot {
+  id       String   @id @default(cuid())
+  date     DateTime @db.Date
+  wardId   String   @map("ward_id")
+  bedType  BedType  @map("bed_type")
+  total    Int
+  occupied Int
+  free     Int
+  blocked  Int
+
+  ward Ward @relation(fields: [wardId], references: [id])
+
+  @@unique([date, wardId, bedType])
+  @@map("census_snapshot")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?  @map("actor_user_id")
+  action      String
+  entity      String
+  entityId    String   @map("entity_id")
+  at          DateTime @default(now())
+  ip          String?
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([at])
+  @@index([entity, entityId])
+  @@map("audit_log")
+}
