@@ -2,6 +2,30 @@
 
 Where SPEC.md was unclear I chose the simplest option and wrote it here.
 
+## Product direction (from the owner, before Phase 2)
+
+BedBoard is **free open-source software that each hospital installs and runs for itself**, not a portfolio demo. This shapes every later choice: safe defaults, no shared or built-in credentials in a real install, clear errors, and docs written for a hospital IT person. The demo seed is for trying the product only.
+
+## Phase 2
+
+18. **First-run setup wizard (`/setup`).** A new install has no users, so `/login` redirects to `/setup`, where the hospital enters its name and creates the first ADMIN. It only works while there are zero users (checked under a Postgres advisory lock so two requests cannot both win), then redirects to login for good. This is an addition to the spec, needed so a hospital never has to run the demo seed or ship default passwords.
+19. **Demo seed vs real install.** The seed (demo logins, `bedboard123`) is only for trying BedBoard. It is skipped if a hospital row exists, so it will not run on top of a real setup. A real hospital should never run it.
+20. **Server refuses to start in production with a bad `AUTH_SECRET`** (missing, under 32 characters, or still the `.env.example` sample). Checked at server start (`src/instrumentation.ts`), not at build, so the Docker image still builds without secrets.
+21. **Auth.js v5 (`next-auth@beta`), credentials provider, JWT cookie sessions (12 h).** v5 is still tagged beta on npm but is the Auth.js release that supports Next 15 App Router. Login is phone + password. Phone numbers are 10-digit Indian mobiles starting 6-9.
+22. **Role is re-read from the database on every API request** (`guard()` in `src/lib/guard.ts`), not trusted from the cookie. Deactivating a user or changing a role takes effect on their next request. Costs one small query per request.
+23. **Every API route calls `guard()` first.** A unit test scans `src/app/api` and fails if a route lacks it, except the deliberately public ones (`api/auth`, `api/health`, `api/setup`, `api/public`). Middleware only redirects pages to `/login`; it is not the security boundary.
+24. **Login and PIN rate limits are in memory** (10 failed logins per phone and 5 wrong PINs per user per 15 minutes; 20 setup attempts per IP). Fine for a single app container, resets on restart. A limit per phone means someone can lock out a known number for 15 minutes; accepted over IP limits, which are unreliable behind a hospital proxy or shared NAT. Revisit if a hospital runs several app containers.
+25. **PIN (Phase 2 = set and verify only).** A user sets a 4-digit PIN on the Profile page (needs their password). `POST /api/me/pin/verify` checks it. The idle lock screen that uses it is Phase 5, as the spec places idle logout there. An admin can reset a PIN.
+26. **Passwords:** 8 to 72 characters (bcrypt ignores bytes past 72). The admin sets a starting password; there is no email, so password reset is done by an admin. Hospitals have no shared mail system to rely on.
+27. **Admin cannot deactivate or demote themselves**, which also guarantees at least one active admin always exists.
+28. **Ward access (`UserWard`) is only stored for NURSE.** Changing a user to another role clears their wards. Helper `canEditWard()` in `src/lib/rbac.ts` is used by Phase 3 ward actions.
+29. **Bulk add** `Bed 1 to 30` = prefix + from + to, up to 200 per request. Labels that already exist in the ward are skipped and reported, so re-running is safe. A bed's type can only change while it is FREE or BLOCKED. Beds and wards are never deleted (history and audit rely on them); wards can be deactivated.
+30. **Admin API paths:** `GET, POST /api/admin/{wards,beds,users}` and `PATCH /api/admin/{wards,beds,users}/:id`. Passwords and PIN hashes are never returned.
+31. **Audit log** now records logins (and failures for known users), setup, and every admin change. The viewer screen is Phase 5.
+32. **Security headers** (nosniff, frame deny, referrer, permissions) set in `next.config.ts`. A Content-Security-Policy is deferred to Phase 7 polish because Next.js inline scripts need a nonce setup.
+33. **Hindi strings** are still inline English. Extraction to `messages/*.json` happens in Phase 6 as planned.
+34. **Dashboard** is a placeholder after login (real one is Phase 4).
+
 ## Phase 1
 
 1. **Spec filename.** The file in the folder is `Spec.md`, not `SPEC.md`. Left as is (Windows is case-insensitive). Rename it before cloning on Linux.
