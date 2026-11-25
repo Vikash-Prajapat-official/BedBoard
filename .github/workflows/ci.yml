@@ -75,7 +75,7 @@ jobs:
           docker compose exec -T app npx prisma db seed
       - name: End-to-end tests (demo hospital)
         run: npm run e2e:demo
-      - name: Lighthouse on the home page (must be 90+ in every category)
+      - name: Lighthouse on the home page (90+ accessibility, best practices, SEO; 70+ performance on a slow CI machine)
         run: |
           npx --yes lighthouse http://localhost:3001 --output=json --output-path=lighthouse.json --quiet \
             --chrome-flags="--headless=new --no-sandbox" --form-factor=mobile --screenEmulation.mobile=true

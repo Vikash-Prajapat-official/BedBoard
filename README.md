@@ -85,7 +85,7 @@ npm run e2e:demo                                  # full journey, offline, Hindi
 npm run e2e:fresh                                 # first-run wizard, wards, beds, staff
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs all of it on every push: lint, type check, unit, database tests, the production image build, both browser suites, and a Lighthouse check of the home page (90+ in every category).
+GitHub Actions (`.github/workflows/ci.yml`) runs all of it on every push: lint, type check, unit, database tests, the production image build, both browser suites, and a Lighthouse check of the home page (90+ for accessibility, best practices and SEO; 70+ for performance on the slow CI machine).
 
 ## Develop
 
