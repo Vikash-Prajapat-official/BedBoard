@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/current-user";
 import { getFreeBeds, getWardMap } from "@/lib/bed-queries";
 import { getEnv } from "@/lib/env";
+import { LiveRefresh } from "@/components/live-refresh";
 import { WardMapView } from "./ward-map";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function WardPage({ params }: { params: Promise<{ id: strin
       <div className="flex items-baseline gap-3">
         <Link href="/dashboard" className="text-sm text-blue-700 underline">All wards</Link>
         <h1 className="text-2xl font-bold">{map.ward.name}</h1>
+        <span className="ml-auto"><LiveRefresh wardId={map.ward.id} /></span>
       </div>
       {!map.canEdit && (
         <p className="rounded-md border border-slate-300 bg-slate-100 p-2 text-sm">

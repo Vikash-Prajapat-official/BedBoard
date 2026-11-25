@@ -20,6 +20,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="font-bold text-blue-700">BedBoard</Link>
           <nav className="flex gap-4 text-sm">
             <Link href="/dashboard">Dashboard</Link>
+            {user.role === "DESK" && <Link href="/find-bed">Find a bed</Link>}
+            {["NURSE", "DOCTOR", "DESK", "ADMIN"].includes(user.role) && <Link href="/discharges">Discharges</Link>}
+            {["HOUSEKEEPING", "NURSE", "ADMIN"].includes(user.role) && <Link href="/housekeeping">Housekeeping</Link>}
             {user.role === "ADMIN" && <Link href="/admin">Admin</Link>}
             <Link href="/profile">Profile</Link>
           </nav>

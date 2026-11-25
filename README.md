@@ -2,7 +2,7 @@
 
 Free, open-source live bed occupancy and discharge tracker for hospitals. See [Spec.md](Spec.md).
 
-**Status: Phase 3 of 7 (bed state machine, ward map, admit, transfer, discharge, cleaning, reservations).**
+**Status: Phase 4 of 7 (live updates, dashboard, find a bed, discharge tracker, housekeeping list).**
 
 BedBoard is free software that each hospital installs and runs for itself.
 
@@ -36,7 +36,7 @@ Health check: http://localhost:3001/health. See [DECISIONS.md](DECISIONS.md) for
 npm test                      # unit tests, no database needed
 ```
 
-The integration tests (including the "two nurses admit the same bed at once" test) need a throwaway PostgreSQL:
+The integration tests (the "two nurses admit the same bed at once" test, and the "a change reaches a live screen within 2 seconds" test) need a throwaway PostgreSQL:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db     # publishes Postgres on 127.0.0.1:5433

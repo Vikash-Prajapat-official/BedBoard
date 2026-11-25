@@ -234,8 +234,12 @@ export async function dischargeStep(actor: ServiceActor, admissionId: string, in
 
     const expected = input.version ?? bed.version;
     if (expected !== bed.version) conflict();
-    const audit = (action: string) =>
-      writeAudit(tx, { actorUserId: actor.id, action, entity: "admission", entityId: adm.id, ip: opts.ip });
+    // Checklist ticks do not change the bed status, but the discharge tracker must still update live.
+    const audit = async (action: string) => {
+      await writeAudit(tx, { actorUserId: actor.id, action, entity: "admission", entityId: adm.id, ip: opts.ip });
+      const payload = JSON.stringify({ bedId: bed.id, wardId: bed.wardId, from: bed.status, to: bed.status, version: bed.version, kind: "checklist" });
+      await tx.$executeRaw`SELECT pg_notify('beds', ${payload})`;
+    };
     const result = (status: BedStatus, version: number) => ({ admissionId: adm.id, bedId: bed.id, status, version });
 
     switch (input.step) {

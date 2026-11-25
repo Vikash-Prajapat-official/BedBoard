@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { canEditWard } from "./rbac";
-import type { Role } from "./constants";
+import type { BedType, Role } from "./constants";
 import type { BedStatus } from "./beds";
 
 export type WardMapBed = {
@@ -96,6 +96,103 @@ export async function getWardMap(viewer: Viewer, wardId: string): Promise<WardMa
       };
     }),
   };
+}
+
+const natural = new Intl.Collator("en", { numeric: true });
+
+// ---- Find a bed (desk) ------------------------------------------------------------
+
+export type FoundBed = {
+  id: string;
+  label: string;
+  bedType: string;
+  version: number;
+  ward: { id: string; name: string; floor: number; gender: string };
+};
+
+/** Free beds. `gender` is the patient's sex: it matches wards of that gender and mixed (ANY) wards. */
+export async function searchFreeBeds(p: { type?: BedType; gender?: "MALE" | "FEMALE"; wardId?: string }): Promise<FoundBed[]> {
+  const beds = await db.bed.findMany({
+    where: {
+      status: "FREE",
+      ...(p.type ? { bedType: p.type } : {}),
+      ward: { active: true, ...(p.wardId ? { id: p.wardId } : {}), ...(p.gender ? { gender: { in: [p.gender, "ANY"] } } : {}) },
+    },
+    select: { id: true, label: true, bedType: true, version: true, ward: { select: { id: true, name: true, floor: true, gender: true, sortOrder: true } } },
+    orderBy: [{ ward: { sortOrder: "asc" } }],
+    take: 500,
+  });
+  beds.sort((a, b) => a.ward.sortOrder - b.ward.sortOrder || natural.compare(a.label, b.label));
+  return beds.map(({ ward: { sortOrder: _s, ...ward }, ...b }) => ({ ...b, ward }));
+}
+
+export type ReservedBed = { id: string; label: string; bedType: string; version: number; wardName: string; reservedUntil: string | null };
+
+/** Beds currently held for an incoming patient (soonest to expire first). */
+export async function getReservedBeds(): Promise<ReservedBed[]> {
+  const beds = await db.bed.findMany({
+    where: { status: "RESERVED", ward: { active: true } },
+    select: { id: true, label: true, bedType: true, version: true, reservedUntil: true, ward: { select: { name: true } } },
+    orderBy: { reservedUntil: "asc" },
+  });
+  return beds.map((b) => ({ id: b.id, label: b.label, bedType: b.bedType, version: b.version, wardName: b.ward.name, reservedUntil: b.reservedUntil?.toISOString() ?? null }));
+}
+
+// ---- Housekeeping -----------------------------------------------------------------
+
+export type CleaningBed = { id: string; label: string; bedType: string; version: number; wardId: string; wardName: string; since: string };
+
+/** Beds waiting to be cleaned, longest-waiting first. Bed labels only, no patient data. */
+export async function getCleaningList(): Promise<CleaningBed[]> {
+  const beds = await db.bed.findMany({
+    where: { status: "CLEANING", ward: { active: true } },
+    select: { id: true, label: true, bedType: true, version: true, statusChangedAt: true, ward: { select: { id: true, name: true } } },
+    orderBy: { statusChangedAt: "asc" },
+  });
+  return beds.map((b) => ({ id: b.id, label: b.label, bedType: b.bedType, version: b.version, wardId: b.ward.id, wardName: b.ward.name, since: b.statusChangedAt.toISOString() }));
+}
+
+// ---- Discharge tracker ------------------------------------------------------------
+
+export type DischargeRow = {
+  admissionId: string;
+  patient: { name: string; age: number; sex: string };
+  bed: { id: string; label: string; version: number; wardId: string; wardName: string };
+  dischargeOrderAt: string;
+  summaryReadyAt: string | null;
+  billClearedAt: string | null;
+  medsGivenAt: string | null;
+};
+
+/**
+ * Open admissions with a discharge order, longest-waiting first. Contains names, so nurses only
+ * get their own wards; desk, doctors and admins get all (SPEC section 8).
+ */
+export async function getDischargeList(viewer: Viewer): Promise<DischargeRow[]> {
+  const rows = await db.admission.findMany({
+    where: {
+      leftAt: null,
+      dischargeOrderAt: { not: null },
+      ...(viewer.role === "NURSE" ? { bed: { wardId: { in: viewer.wardIds } } } : {}),
+    },
+    select: {
+      id: true, dischargeOrderAt: true, summaryReadyAt: true, billClearedAt: true, medsGivenAt: true,
+      patient: { select: { name: true, age: true, sex: true } },
+      bed: { select: { id: true, label: true, version: true, wardId: true, ward: { select: { name: true } } } },
+    },
+    orderBy: { dischargeOrderAt: "asc" },
+    take: 300,
+  });
+  const iso = (d: Date | null) => (d ? d.toISOString() : null);
+  return rows.map((r) => ({
+    admissionId: r.id,
+    patient: r.patient,
+    bed: { id: r.bed.id, label: r.bed.label, version: r.bed.version, wardId: r.bed.wardId, wardName: r.bed.ward.name },
+    dischargeOrderAt: r.dischargeOrderAt!.toISOString(),
+    summaryReadyAt: iso(r.summaryReadyAt),
+    billClearedAt: iso(r.billClearedAt),
+    medsGivenAt: iso(r.medsGivenAt),
+  }));
 }
 
 /** Free beds hospital-wide (labels only, no patient data) for the transfer picker. */

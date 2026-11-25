@@ -16,6 +16,9 @@ vi.mock("@/lib/auth", () => ({
   signOut: async () => null,
 }));
 
+// The stream route would open a real database connection; only its role check is under test.
+vi.mock("@/lib/sse", () => ({ subscribe: () => () => {} }));
+
 vi.mock("@/lib/db", () => {
   const model = (name: string) =>
     new Proxy({}, { get: (_t, method) => (name === "user" && method === "findUnique" ? async () => state.actor : async () => []) });
@@ -29,6 +32,9 @@ import * as beds from "@/app/api/admin/beds/route";
 import * as bed from "@/app/api/admin/beds/[id]/route";
 import * as users from "@/app/api/admin/users/route";
 import * as user from "@/app/api/admin/users/[id]/route";
+import * as search from "@/app/api/beds/search/route";
+import * as dashboard from "@/app/api/dashboard/route";
+import * as stream from "@/app/api/stream/route";
 import * as wardBeds from "@/app/api/wards/[id]/beds/route";
 import * as admit from "@/app/api/beds/[id]/admit/route";
 import * as reserve from "@/app/api/beds/[id]/reserve/route";
@@ -56,11 +62,14 @@ const bedRoutes: [string, string, Handler, Role[]][] = [
   ["GET /api/wards/:id/beds", "GET", wardBeds.GET as Handler, ["NURSE", "DESK", "DOCTOR", "ADMIN"]],
   ["POST /api/beds/:id/admit", "POST", admit.POST as Handler, ["NURSE", "DESK"]],
   ["POST /api/beds/:id/reserve", "POST", reserve.POST as Handler, ["DESK"]],
+  ["GET /api/beds/search", "GET", search.GET as Handler, ["DESK"]],
   ["POST /api/beds/:id/status", "POST", statusRoute.POST as Handler, ["ADMIN", "NURSE", "DESK", "DOCTOR", "HOUSEKEEPING"]],
   ["POST /api/admissions/:id/transfer", "POST", transfer.POST as Handler, ["NURSE"]],
   ["POST /api/admissions/:id/discharge-step", "POST", dischargeStep.POST as Handler, ["NURSE", "DOCTOR"]],
 ];
 const anyUserRoutes: [string, string, Handler][] = [
+  ["GET /api/dashboard", "GET", dashboard.GET as Handler],
+  ["GET /api/stream", "GET", stream.GET as Handler],
   ["POST /api/me/pin", "POST", pin.POST as Handler],
   ["POST /api/me/pin/verify", "POST", pinVerify.POST as Handler],
 ];
