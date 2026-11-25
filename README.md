@@ -57,6 +57,7 @@ Demo logins use the password `bedboard123`: administrator `9000000001`, nurse `9
 | [ADMIN_GUIDE.md](ADMIN_GUIDE.md) | Installing, running and looking after BedBoard in a hospital |
 | [docs/PILOT_CHECKLIST.md](docs/PILOT_CHECKLIST.md) | Hands-on tests to do before showing it to a hospital |
 | [docs/patient-notice.md](docs/patient-notice.md) | The patient privacy notice and how to use it |
+| [docs/DEPLOY_DEMO.md](docs/DEPLOY_DEMO.md) | Putting a demo (made-up data) on a public link with Vercel and Neon |
 | [DECISIONS.md](DECISIONS.md) | Every design choice, and why. Read this to understand the product |
 | [Spec.md](Spec.md) | The original specification |
 

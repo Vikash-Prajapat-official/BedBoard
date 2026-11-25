@@ -3,6 +3,8 @@ import { subscribe } from "@/lib/sse";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// On Vercel the stream ends after this many seconds and the browser reconnects by itself.
+export const maxDuration = 300;
 
 /**
  * Server-Sent Events: one event per bed change, fed by Postgres LISTEN/NOTIFY.
