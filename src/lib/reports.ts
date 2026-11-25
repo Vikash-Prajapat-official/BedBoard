@@ -10,14 +10,16 @@ const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) 
 const validDate = (d: string) => DATE.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && addDays(d, 0) === d;
 
 /** Reads ?from=YYYY-MM-DD&to=YYYY-MM-DD (hospital local dates, both inclusive). Default: the last 30 days. */
-export async function resolveRange(q: { from?: string | null; to?: string | null }, now: Date = new Date()): Promise<{ ok: true; range: Range } | { ok: false; message: string }> {
+export type RangeError = "DATES" | "ORDER" | "LONG";
+
+export async function resolveRange(q: { from?: string | null; to?: string | null }, now: Date = new Date()): Promise<{ ok: true; range: Range } | { ok: false; message: string; code: RangeError }> {
   const hospital = await db.hospital.findFirst({ select: { timezone: true } });
   const timeZone = hospital?.timezone ?? "Asia/Kolkata";
   const to = q.to || localDate(now, timeZone);
   const from = q.from || addDays(to, -29);
-  if (!validDate(from) || !validDate(to)) return { ok: false, message: "Dates must look like 2026-11-25" };
-  if (from > to) return { ok: false, message: "'From' must not be after 'to'" };
-  if ((Date.parse(to) - Date.parse(from)) / 86_400_000 + 1 > MAX_RANGE_DAYS) return { ok: false, message: `At most ${MAX_RANGE_DAYS} days at a time` };
+  if (!validDate(from) || !validDate(to)) return { ok: false, code: "DATES", message: "Dates must look like 2026-11-25" };
+  if (from > to) return { ok: false, code: "ORDER", message: "'From' must not be after 'to'" };
+  if ((Date.parse(to) - Date.parse(from)) / 86_400_000 + 1 > MAX_RANGE_DAYS) return { ok: false, code: "LONG", message: `At most ${MAX_RANGE_DAYS} days at a time` };
   return { ok: true, range: { from, to, start: startOfLocalDate(from, timeZone), end: startOfLocalDate(addDays(to, 1), timeZone), timeZone } };
 }
 

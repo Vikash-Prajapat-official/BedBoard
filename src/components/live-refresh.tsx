@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { safeRefresh } from "@/lib/client-api";
 
@@ -11,6 +12,7 @@ type State = "connecting" | "live" | "offline";
  * changes. Pass wardId to react only to that ward. The label says it in words, not just colour.
  */
 export function LiveRefresh({ wardId }: { wardId?: string }) {
+  const t = useTranslations("live");
   const router = useRouter();
   const [state, setState] = useState<State>("connecting");
 
@@ -44,7 +46,6 @@ export function LiveRefresh({ wardId }: { wardId?: string }) {
     };
   }, [router, wardId]);
 
-  const text = state === "live" ? "Live" : state === "offline" ? "Reconnecting…" : "Connecting…";
   return (
     <span
       role="status"
@@ -52,7 +53,7 @@ export function LiveRefresh({ wardId }: { wardId?: string }) {
         state === "live" ? "border-green-600 bg-green-100 text-green-900" : "border-amber-600 bg-amber-100 text-amber-900"
       }`}
     >
-      <span aria-hidden>{state === "live" ? "●" : "○"}</span> {text}
+      <span aria-hidden>{state === "live" ? "●" : "○"}</span> {t(state === "live" ? "live" : state === "offline" ? "reconnecting" : "connecting")}
     </span>
   );
 }

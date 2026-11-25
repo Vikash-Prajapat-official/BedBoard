@@ -1,9 +1,10 @@
 "use client";
 
+import { localizedError } from "./error-messages";
 import { classifyResponse, createQueue, idbStore, type QueuedAction, type SendResult } from "./offline-queue";
 
 /** `queued` is true when there was no network and the action was saved on this phone to send later. */
-export type ApiResult<T = unknown> = { ok: true; data: T; queued?: boolean } | { ok: false; message: string };
+export type ApiResult<T = unknown> = { ok: true; data: T; queued?: boolean } | { ok: false; message: string; code?: string };
 
 export const offlineQueue = createQueue(idbStore());
 export const QUEUE_CHANGED = "bb-queue-changed";
@@ -25,7 +26,10 @@ export async function callApi<T = unknown>(
       body: body ? JSON.stringify(body) : undefined,
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, message: json?.error?.message ?? `Request failed (${res.status})` };
+    if (!res.ok) {
+      const code: string | undefined = json?.error?.code;
+      return { ok: false, code, message: localizedError(code, json?.error?.message ?? `Request failed (${res.status})`) };
+    }
     return { ok: true, data: json as T };
   } catch {
     if (opts.queue && method === "POST") {
@@ -34,10 +38,10 @@ export async function callApi<T = unknown>(
         window.dispatchEvent(new Event(QUEUE_CHANGED));
         return { ok: true, data: {} as T, queued: true };
       } catch {
-        return { ok: false, message: "No connection, and this phone could not save the action. Try again." };
+        return { ok: false, code: "QUEUE_FAILED", message: localizedError("QUEUE_FAILED", "No connection, and this phone could not save the action. Try again.") };
       }
     }
-    return { ok: false, message: "Network error. Check your connection and try again." };
+    return { ok: false, code: "NETWORK", message: localizedError("NETWORK", "Network error. Check your connection and try again.") };
   }
 }
 
@@ -63,7 +67,7 @@ async function sendQueued(a: QueuedAction): Promise<SendResult> {
       body: JSON.stringify(a.body),
     });
     const json = await res.json().catch(() => ({}));
-    return classifyResponse(res.status, json?.error?.message);
+    return classifyResponse(res.status, json?.error?.message, json?.error?.code);
   } catch {
     return { kind: "retry" };
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ const LOCKED = "bedboard-locked";
  * against someone with developer tools, and the login session itself still ends after 12 hours.
  */
 export function IdleLock({ idleMinutes, hasPin, logout }: { idleMinutes: number; hasPin: boolean; logout: () => Promise<void> }) {
+  const t = useTranslations("lock");
   const router = useRouter();
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
@@ -69,7 +71,7 @@ export function IdleLock({ idleMinutes, hasPin, logout }: { idleMinutes: number;
     const form = e.currentTarget;
     setBusy(true);
     setError("");
-    const r = await callApi("/api/me/pin/verify", "POST", { pin: new FormData(form).get("pin") });
+    const r = await callApi<{ error?: { code?: string } }>("/api/me/pin/verify", "POST", { pin: new FormData(form).get("pin") });
     setBusy(false);
     form.reset();
     if (r.ok) {
@@ -78,23 +80,23 @@ export function IdleLock({ idleMinutes, hasPin, logout }: { idleMinutes: number;
       localStorage.setItem(LAST_ACTIVE, String(lastActive.current));
       setLocked(false);
       router.refresh();
-    } else if (/too many|log in/i.test(r.message) || /No PIN/i.test(r.message)) {
+    } else if (r.code === "RATE_LIMITED" || r.code === "NO_PIN") {
       leave(); // five wrong PINs, or the PIN was removed: use the password instead
     } else setError(r.message);
   }
 
   if (!locked) return null;
   return (
-    <div role="dialog" aria-modal="true" aria-label="Screen locked" className="fixed inset-0 z-50 flex items-center justify-center bg-white p-6">
+    <div role="dialog" aria-modal="true" aria-label={t("aria")} className="fixed inset-0 z-50 flex items-center justify-center bg-white p-6">
       <form onSubmit={unlock} className="w-full max-w-xs space-y-4 text-center">
-        <h2 className="text-xl font-bold text-blue-700">Locked</h2>
-        <p className="text-sm text-slate-700">The screen locked because nobody touched it for {idleMinutes} minutes. Enter your PIN to carry on.</p>
+        <h2 className="text-xl font-bold text-blue-700">{t("title")}</h2>
+        <p className="text-sm text-slate-700">{t("text", { minutes: idleMinutes })}</p>
         {error && <p role="alert" className="rounded-md border border-red-600 bg-red-100 p-2 text-sm text-red-900">{error}</p>}
-        <Field label="4-digit PIN">
+        <Field label={t("pin")}>
           <Input name="pin" type="password" inputMode="numeric" pattern="\d{4}" maxLength={4} required autoFocus autoComplete="off" className="text-center text-2xl tracking-widest" />
         </Field>
-        <Button type="submit" className="w-full" disabled={busy}>Unlock</Button>
-        <Button type="button" variant="outline" className="w-full" onClick={leave}>Log out and use my password</Button>
+        <Button type="submit" className="w-full" disabled={busy}>{t("unlock")}</Button>
+        <Button type="button" variant="outline" className="w-full" onClick={leave}>{t("logoutInstead")}</Button>
       </form>
     </div>
   );

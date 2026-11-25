@@ -22,22 +22,22 @@ export type Store = {
 export type SendResult =
   | { kind: "ok" }
   | { kind: "conflict"; message: string } // stale version: the bed changed, drop it and tell the nurse
-  | { kind: "rejected"; message: string } // the server refused it for good (no access, bad input)
+  | { kind: "rejected"; message: string; code?: string } // the server refused it for good (no access, bad input)
   | { kind: "retry" } // network or server trouble: keep it
   | { kind: "auth" }; // logged out: keep it until she logs in again
 
-export function classifyResponse(status: number, message?: string): SendResult {
+export function classifyResponse(status: number, message?: string, code?: string): SendResult {
   if (status >= 200 && status < 300) return { kind: "ok" };
   if (status === 409) return { kind: "conflict", message: "Bed changed, please refresh" };
   if (status === 401) return { kind: "auth" };
   if (status === 408 || status === 429 || status >= 500) return { kind: "retry" };
-  return { kind: "rejected", message: message ?? `Request refused (${status})` };
+  return { kind: "rejected", message: message ?? `Request refused (${status})`, ...(code ? { code } : {}) };
 }
 
 export type ReplayResult = {
   sent: number;
   conflicts: { action: QueuedAction; message: string }[];
-  rejected: { action: QueuedAction; message: string }[];
+  rejected: { action: QueuedAction; message: string; code?: string }[];
   remaining: number;
   needsLogin?: boolean;
   skipped?: boolean;
@@ -79,7 +79,7 @@ export function createQueue(store: Store, newId: () => string = () => crypto.ran
           }
           if (r.kind === "ok") result.sent++;
           else if (r.kind === "conflict") result.conflicts.push({ action, message: r.message });
-          else result.rejected.push({ action, message: r.message });
+          else result.rejected.push({ action, message: r.message, ...(r.code ? { code: r.code } : {}) });
           await exclusive(async () => store.set((await store.get()).filter((i) => i.id !== action.id)));
         }
         result.remaining = (await store.get()).length;

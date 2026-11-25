@@ -5,6 +5,17 @@
 }
 
 body {
-  font-family: Inter, "Noto Sans Devanagari", system-ui, sans-serif;
+  font-family: "Inter Variable", "Noto Sans Devanagari Variable", system-ui, sans-serif;
   background: #f8fafc;
+}
+
+/* Devanagari has tall marks: give lines a little more room than Latin text needs. */
+:lang(hi) {
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

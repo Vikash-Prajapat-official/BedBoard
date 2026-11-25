@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/current-user";
-import { getDashboard, type Counts } from "@/lib/dashboard";
+import { getDashboard } from "@/lib/dashboard";
 import { LiveRefresh } from "@/components/live-refresh";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,27 +12,50 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const user = await requireUser();
   const d = await getDashboard();
+  const t = await getTranslations("dashboard");
+  const tb = await getTranslations("bedType");
   const canOpen = ["NURSE", "DESK", "DOCTOR", "ADMIN"].includes(user.role);
+  const link = "text-blue-700 underline";
+
+  const c = d.totals;
+  const totals = [
+    { l: t("freeBeds"), v: c.free, n: t("ofTotal", { n: c.total }) },
+    { l: t("occupancy"), v: c.occupancyPct === null ? "–" : `${c.occupancyPct}%`, n: t("occupiedCount", { n: c.occupied }) },
+    { l: t("dischargesToday"), v: c.dischargesToday, n: t("expected") },
+    { l: t("beingCleaned"), v: c.cleaning, n: t("notReady") },
+  ];
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-bold">{d.hospitalName ?? "Hospital"} · beds now</h1>
+        <h1 className="text-xl font-bold">{t("title", { hospital: d.hospitalName ?? t("hospitalFallback") })}</h1>
         <span className="ml-auto flex items-center gap-2">
           <LiveRefresh />
           <FullscreenButton />
         </span>
       </div>
 
-      <Totals c={d.totals} />
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {totals.map((i) => (
+          <div key={i.l} className="rounded-xl border bg-white p-4 shadow-sm">
+            <dt className="text-sm text-slate-700">{i.l}</dt>
+            <dd className="text-3xl font-bold text-blue-700">{i.v}</dd>
+            <dd className="text-xs text-slate-700">{i.n}</dd>
+          </div>
+        ))}
+      </dl>
 
       {d.wards.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-sm text-slate-700">
-            No wards yet.{" "}
-            {user.role === "ADMIN" ? (
-              <>Set up your <Link className="text-blue-700 underline" href="/admin/wards">wards</Link>, <Link className="text-blue-700 underline" href="/admin/beds">beds</Link> and <Link className="text-blue-700 underline" href="/admin/users">staff</Link>.</>
-            ) : "Ask an administrator to add them."}
+            {t("noWards")}{" "}
+            {user.role === "ADMIN"
+              ? t.rich("noWardsAdmin", {
+                  w: (x) => <Link className={link} href="/admin/wards">{x}</Link>,
+                  b: (x) => <Link className={link} href="/admin/beds">{x}</Link>,
+                  s: (x) => <Link className={link} href="/admin/users">{x}</Link>,
+                })
+              : t("noWardsOther")}
           </CardContent>
         </Card>
       ) : (
@@ -42,18 +66,24 @@ export default async function DashboardPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-baseline justify-between gap-2">
                     {w.name}
-                    <span className="text-sm font-normal text-slate-600">{w.occupancyPct === null ? "–" : `${w.occupancyPct}%`} full</span>
+                    <span className="text-sm font-normal text-slate-700">{w.occupancyPct === null ? "–" : t("pctFull", { pct: w.occupancyPct })}</span>
                   </CardTitle>
-                  <Bar pct={w.occupancyPct} />
+                  <div className="h-2 w-full overflow-hidden rounded bg-slate-200" aria-hidden>
+                    <div className="h-full bg-blue-700" style={{ width: `${w.occupancyPct ?? 0}%` }} />
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <p className="text-lg"><strong>{w.free}</strong> free <span className="text-sm text-slate-600">of {w.total} beds</span></p>
+                  <p className="text-lg"><strong>{w.free}</strong> {t("freeWord")} <span className="text-sm text-slate-700">{t("ofBeds", { n: w.total })}</span></p>
                   {w.types.length > 0 && (
                     <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-700">
-                      {w.types.map((t) => <li key={t.type}>{t.type.toLowerCase()} {t.free}/{t.total}</li>)}
+                      {w.types.map((x) => <li key={x.type}>{tb(x.type as never)} {x.free}/{x.total}</li>)}
                     </ul>
                   )}
-                  <p className="text-slate-700">{w.dischargesToday} discharge{w.dischargesToday === 1 ? "" : "s"} today · {w.cleaning} cleaning{w.reserved ? ` · ${w.reserved} reserved` : ""}{w.blocked ? ` · ${w.blocked} blocked` : ""}</p>
+                  <p className="text-slate-700">
+                    {t("dischargesLine", { count: w.dischargesToday })} · {t("cleaningN", { n: w.cleaning })}
+                    {w.reserved ? ` · ${t("reservedN", { n: w.reserved })}` : ""}
+                    {w.blocked ? ` · ${t("blockedN", { n: w.blocked })}` : ""}
+                  </p>
                 </CardContent>
               </Card>
             );
@@ -62,33 +92,5 @@ export default async function DashboardPage() {
         </ul>
       )}
     </div>
-  );
-}
-
-function Bar({ pct }: { pct: number | null }) {
-  return (
-    <div className="h-2 w-full overflow-hidden rounded bg-slate-200" aria-hidden>
-      <div className="h-full bg-blue-700" style={{ width: `${pct ?? 0}%` }} />
-    </div>
-  );
-}
-
-function Totals({ c }: { c: Counts }) {
-  const items = [
-    { label: "Free beds", value: c.free, note: `of ${c.total}` },
-    { label: "Occupancy", value: c.occupancyPct === null ? "–" : `${c.occupancyPct}%`, note: `${c.occupied} occupied` },
-    { label: "Discharges today", value: c.dischargesToday, note: "expected" },
-    { label: "Being cleaned", value: c.cleaning, note: "not yet ready" },
-  ];
-  return (
-    <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {items.map((i) => (
-        <div key={i.label} className="rounded-xl border bg-white p-4 shadow-sm">
-          <dt className="text-sm text-slate-600">{i.label}</dt>
-          <dd className="text-3xl font-bold text-blue-700">{i.value}</dd>
-          <dd className="text-xs text-slate-600">{i.note}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }

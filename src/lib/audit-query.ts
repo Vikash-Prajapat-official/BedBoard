@@ -44,7 +44,7 @@ export async function getAuditPage(f: AuditFilter) {
       at: r.at.toISOString(),
       action: r.action,
       what: r.entity === "bed" ? (bedLabel.get(r.entityId) ?? `bed ${r.entityId}`) : `${r.entity} ${r.entityId}`,
-      actor: r.actor ? `${r.actor.name} (${r.actor.role.toLowerCase()})` : "system",
+      actor: r.actor ? { name: r.actor.name, role: r.actor.role } : null, // null = the system itself
       ip: r.ip,
     })),
   };

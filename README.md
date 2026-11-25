@@ -2,7 +2,7 @@
 
 Free, open-source live bed occupancy and discharge tracker for hospitals. See [Spec.md](Spec.md).
 
-**Status: Phase 5 of 7 (reports, CSV, census, retention, encrypted backups, idle lock, offline queue, audit log).**
+**Status: Phase 6 of 7 (home page, Hindi, installable app, optional public page).**
 
 BedBoard is free software that each hospital installs and runs for itself.
 
@@ -16,6 +16,13 @@ docker compose up -d --build
 Open http://localhost:3001. On first start you are taken to a setup page where you enter your hospital name and create the first administrator. Then add wards, beds (bulk add, for example "Bed 1 to 30") and staff logins under **Admin**.
 
 The app will not start if `AUTH_SECRET` is missing, shorter than 32 characters, or still the sample value.
+
+## Languages, app install, public page
+
+- **English and Hindi** on every screen. Use the switcher in the header; the choice is remembered on that device. The Hindi was written without a native-speaker review: please have someone read `messages/hi.json` before real use. Fixing wording means editing that one file.
+- **Install as an app:** open BedBoard in Chrome on an Android phone and choose "Add to Home screen" / "Install app". It then opens full screen. Pages are always loaded live (nothing with patient names is stored on the phone); if there is no connection you see a short offline screen, and taps you already made on an open page are saved and sent later.
+- **Public availability page** (counts of free beds by type, no names): set `PUBLIC_PAGE_ENABLED=true` in `.env`, restart, and share `http://<server>:3001/public`. It is off by default.
+- **Home page footer:** set `REPO_URL` and `CONTACT_EMAIL` in `.env` to show a GitHub link and a contact address.
 
 ## Backups
 

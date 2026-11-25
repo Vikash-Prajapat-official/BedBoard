@@ -152,7 +152,7 @@ run("scheduled jobs and reports against PostgreSQL", () => {
 
       const page = await auditQ.getAuditPage({ action: `viewer_test_${sfx}`, actorId: u.id });
       expect(page.total).toBe(3);
-      expect(page.rows[0]).toMatchObject({ actor: `Auditor ${sfx} (admin)` });
+      expect(page.rows[0]).toMatchObject({ actor: { name: `Auditor ${sfx}`, role: "ADMIN" } });
       expect(page.rows[0]!.what).toContain(`Jobs-${sfx} / J`); // "Ward / Bed label", not a raw id
       expect(page.actions).toContain(`viewer_test_${sfx}`);
       expect(JSON.stringify(page)).not.toContain("Real Name");

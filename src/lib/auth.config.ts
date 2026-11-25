@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 // Pages anyone may open without logging in. Everything else needs a session.
-const PUBLIC_PREFIXES = ["/login", "/setup", "/health", "/public"];
+const PUBLIC_PREFIXES = ["/login", "/setup", "/health", "/public", "/offline"];
 
 /** Edge-safe half of the Auth.js config (no database or bcrypt imports). */
 export const authConfig = {
