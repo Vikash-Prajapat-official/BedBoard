@@ -85,6 +85,8 @@
     "VERSION_CONFLICT": "Bed changed, please refresh",
     "INVALID_TRANSITION": "That is not possible for this bed right now",
     "ALREADY_ADMITTED": "This patient is already admitted to a bed",
+    "PATIENT_ADMITTED": "This patient is still admitted. Erase after they have left.",
+    "ALREADY_ANONYMISED": "This patient’s details were already erased",
     "ALREADY_LEFT": "This patient has already left",
     "ORDER_REQUIRED": "The discharge order must be given first",
     "BED_TAKEN": "That bed is no longer free",
@@ -297,7 +299,8 @@
       "wards": { "title": "Wards", "text": "Add wards, set gender, floor and specialty." },
       "beds": { "title": "Beds", "text": "Add beds in bulk (for example Bed 1 to 30), set bed types." },
       "users": { "title": "Staff", "text": "Create logins, choose roles, give nurses their wards." },
-      "audit": { "title": "Audit log", "text": "Who changed what and when: bed changes, logins, setup and exports." }
+      "audit": { "title": "Audit log", "text": "Who changed what and when: bed changes, logins, setup and exports." },
+      "privacy": { "title": "Patient privacy", "text": "Correct a patient’s details, erase them on request, print the patient notice." }
     },
     "wards": {
       "addTitle": "Add a ward",
@@ -369,6 +372,44 @@
       "page": "Page {page} of {pages}",
       "system": "system"
     }
+  },
+  "privacy": {
+    "title": "Patient privacy",
+    "intro": "Correct a mistake in a patient’s details, or erase them when a patient asks. The hospital’s main medical record is kept elsewhere; BedBoard only holds what is needed to run the beds.",
+    "search": "Search by UHID or name",
+    "searchBtn": "Search",
+    "minChars": "Type at least 2 characters.",
+    "none": "No patient found.",
+    "uhid": "UHID",
+    "name": "Name",
+    "age": "Age",
+    "sex": "Sex",
+    "phone": "Phone",
+    "stays": "{count, plural, one {# stay} other {# stays}}",
+    "admittedNow": "Admitted now. Details can be corrected, but not erased until the patient has left.",
+    "save": "Save correction",
+    "saved": "Correction saved",
+    "erase": "Erase details",
+    "eraseConfirm": "Erase this patient’s name, UHID and phone for good? Age and sex stay so reports keep working. This cannot be undone.",
+    "eraseYes": "Yes, erase",
+    "erased": "Details erased",
+    "noticeLink": "Printable patient notice",
+    "retentionNote": "Details are also erased automatically {days} days after the patient leaves."
+  },
+  "notice": {
+    "title": "How {hospital} uses your information",
+    "print": "Print this notice",
+    "why": "Why we keep it",
+    "whyText": "To give you a bed and run the ward safely: to know which bed you are in, when you can be discharged and when the bed can be cleaned for the next patient.",
+    "what": "What we keep",
+    "whatText": "Your name, hospital number (UHID), age, sex, the ward and bed you are in, and the dates and times of your stay. We do not keep your medical history in this system.",
+    "who": "Who can see it",
+    "whoText": "Only the staff of your ward, the admission desk, your doctors and the hospital administrators. Screens that show many beds at once, and any public page, show numbers only, never names.",
+    "howLong": "How long we keep it",
+    "howLongText": "Your name and contact details are erased {days} days after you leave. The hospital’s main medical record is kept separately, for the period the law requires.",
+    "rights": "Your rights",
+    "rightsText": "You can ask us to correct a mistake or to erase your details from this system. Ask at the admission desk or contact:",
+    "contact": "Contact person: ______________________   Phone: ______________"
   },
   "profile": {
     "line": "{role} · {phone}",

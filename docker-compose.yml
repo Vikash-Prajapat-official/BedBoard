@@ -64,5 +64,25 @@ services:
       db:
         condition: service_healthy
 
+  # Optional HTTPS (off unless you start it: docker compose --profile https up -d). See Caddyfile and ADMIN_GUIDE.md.
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
 volumes:
   dbdata:
+  caddydata:
+  caddyconfig:

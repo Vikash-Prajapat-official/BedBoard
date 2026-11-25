@@ -1,0 +1,22 @@
+# Optional HTTPS in front of BedBoard (SPEC section 8). Off by default; turn it on with:
+#     docker compose --profile https up -d
+# then open https://<SITE_ADDRESS>. Phones can only "Install app" (and run the service worker) over HTTPS.
+#
+# Set SITE_ADDRESS in .env:
+#   - a hospital LAN with no internet:  SITE_ADDRESS=192.168.1.10   (or a name like bedboard.hospital.local)
+#     Caddy makes its own private certificate. Each phone must trust Caddy's root certificate once
+#     (see ADMIN_GUIDE.md, "HTTPS"); until then the browser shows a warning.
+#   - a real public domain name that points at this server (and ports 80 and 443 reachable from the internet):
+#     delete the "local_certs" line below and Caddy gets a normal certificate from Let's Encrypt by itself.
+{
+	local_certs
+}
+
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	reverse_proxy app:3001 {
+		# Do not hold back responses: this is what lets live updates (Server-Sent Events) reach the screen.
+		flush_interval -1
+	}
+}

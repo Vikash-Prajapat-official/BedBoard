@@ -32,6 +32,9 @@ import * as beds from "@/app/api/admin/beds/route";
 import * as bed from "@/app/api/admin/beds/[id]/route";
 import * as users from "@/app/api/admin/users/route";
 import * as user from "@/app/api/admin/users/[id]/route";
+import * as patients from "@/app/api/admin/patients/route";
+import * as patient from "@/app/api/admin/patients/[id]/route";
+import * as patientErase from "@/app/api/admin/patients/[id]/anonymise/route";
 import * as repOcc from "@/app/api/reports/occupancy/route";
 import * as repLos from "@/app/api/reports/los/route";
 import * as repTurn from "@/app/api/reports/turnover/route";
@@ -53,6 +56,9 @@ import * as pinVerify from "@/app/api/me/pin/verify/route";
 type Handler = (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response> | Response;
 
 const adminRoutes: [string, string, Handler][] = [
+  ["GET /api/admin/patients", "GET", patients.GET as Handler],
+  ["PATCH /api/admin/patients/:id", "PATCH", patient.PATCH as Handler],
+  ["POST /api/admin/patients/:id/anonymise", "POST", patientErase.POST as Handler],
   ["GET /api/reports/occupancy", "GET", repOcc.GET as Handler],
   ["GET /api/reports/los", "GET", repLos.GET as Handler],
   ["GET /api/reports/turnover", "GET", repTurn.GET as Handler],

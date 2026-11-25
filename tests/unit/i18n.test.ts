@@ -22,7 +22,7 @@ const H = flatten(hi as Tree);
 
 // Words that stay in Latin letters on purpose (brand and acronyms).
 const SAME_IN_BOTH = new Set([
-  "language.en", "bedType.ICU", "landing.footer.github", "ward.admit.uhid",
+  "language.en", "bedType.ICU", "landing.footer.github", "ward.admit.uhid", "privacy.uhid",
   // Pure placeholders: only names and numbers, nothing to translate.
   "nav.who", "ward.queueLabel", "profile.line",
 ]);

@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint, type check, unit tests, and the tests that need a real PostgreSQL
+  # (the "two nurses admit the same bed at once" test, live updates in under 2 seconds, reports, retention).
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bedboard
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: bedboard_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bedboard -d bedboard_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://bedboard:ci-password@localhost:5432/bedboard_test
+      TEST_DATABASE_URL: postgresql://bedboard:ci-password@localhost:5432/bedboard_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx prisma migrate deploy
+      - run: npm run test:integration
+
+  # The production image builds (this is also what a hospital runs).
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t bedboard:ci .
+
+  # The real thing: the whole stack in Docker, driven by a real browser.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Same three steps a hospital follows: make .env, start, open.
+      - name: Create .env (random secrets) and switch the public page on for the test
+        run: |
+          sh scripts/init-env.sh
+          sed -i 's/^PUBLIC_PAGE_ENABLED=.*/PUBLIC_PAGE_ENABLED=true/' .env
+
+      # 1. A database loaded with the demo seed: the full journey, offline, Hindi, access rules.
+      - name: Start BedBoard and load the demo hospital
+        run: |
+          docker compose up -d --build --wait
+          docker compose exec -T app npx prisma db seed
+      - name: End-to-end tests (demo hospital)
+        run: npm run e2e:demo
+      - name: Lighthouse on the home page (must be 90+ in every category)
+        run: |
+          npx --yes lighthouse http://localhost:3001 --output=json --output-path=lighthouse.json --quiet \
+            --chrome-flags="--headless=new --no-sandbox" --form-factor=mobile --screenEmulation.mobile=true
+          node scripts/check-lighthouse.mjs lighthouse.json
+
+      # 2. A clean machine: brand-new empty database, first-run wizard, no demo data, no default password.
+      - name: Start again from nothing
+        run: |
+          docker compose down -v
+          docker compose up -d --build --wait
+      - name: End-to-end tests (clean install)
+        run: npm run e2e:fresh
+
+      - name: Show the logs if anything failed
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+            lighthouse.json
+          if-no-files-found: ignore

@@ -121,5 +121,13 @@ export const dischargeStepSchema = z.object({
   plannedFor: z.string().datetime().optional(),
 });
 
+// ---- Patient privacy tools (admin): correct a mistake in a patient's details ----
+export const patientPatchSchema = z.object({
+  name: name.optional(),
+  age: z.number().int().min(0).max(130).optional(),
+  sex: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
+  phone: phoneSchema.nullable().optional(),
+});
+
 export const pinSetSchema = z.object({ password: z.string().min(1).max(72), pin: pinSchema });
 export const pinVerifySchema = z.object({ pin: pinSchema });

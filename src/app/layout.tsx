@@ -6,6 +6,7 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/noto-sans-devanagari";
 import "./globals.css";
 import { ErrorMessages } from "@/components/error-messages";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider>
           <ErrorMessages locale={locale} messages={messages.errors as unknown as Record<string, string>} />
+          <ServiceWorkerRegister />
           {children}
         </NextIntlClientProvider>
       </body>
