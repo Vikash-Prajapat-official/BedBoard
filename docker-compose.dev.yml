@@ -1,0 +1,7 @@
+# Developer / CI override: publishes Postgres on localhost only, for the integration tests.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+# Do not use this file for a real hospital install.
+services:
+  db:
+    ports:
+      - "127.0.0.1:5433:5432"

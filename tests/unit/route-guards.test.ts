@@ -29,6 +29,12 @@ import * as beds from "@/app/api/admin/beds/route";
 import * as bed from "@/app/api/admin/beds/[id]/route";
 import * as users from "@/app/api/admin/users/route";
 import * as user from "@/app/api/admin/users/[id]/route";
+import * as wardBeds from "@/app/api/wards/[id]/beds/route";
+import * as admit from "@/app/api/beds/[id]/admit/route";
+import * as reserve from "@/app/api/beds/[id]/reserve/route";
+import * as statusRoute from "@/app/api/beds/[id]/status/route";
+import * as transfer from "@/app/api/admissions/[id]/transfer/route";
+import * as dischargeStep from "@/app/api/admissions/[id]/discharge-step/route";
 import * as pin from "@/app/api/me/pin/route";
 import * as pinVerify from "@/app/api/me/pin/verify/route";
 
@@ -44,6 +50,15 @@ const adminRoutes: [string, string, Handler][] = [
   ["GET /api/admin/users", "GET", users.GET as Handler],
   ["POST /api/admin/users", "POST", users.POST as Handler],
   ["PATCH /api/admin/users/:id", "PATCH", user.PATCH as Handler],
+];
+// SPEC section 7 "Who" column for the bed routes. The state machine refines these further.
+const bedRoutes: [string, string, Handler, Role[]][] = [
+  ["GET /api/wards/:id/beds", "GET", wardBeds.GET as Handler, ["NURSE", "DESK", "DOCTOR", "ADMIN"]],
+  ["POST /api/beds/:id/admit", "POST", admit.POST as Handler, ["NURSE", "DESK"]],
+  ["POST /api/beds/:id/reserve", "POST", reserve.POST as Handler, ["DESK"]],
+  ["POST /api/beds/:id/status", "POST", statusRoute.POST as Handler, ["ADMIN", "NURSE", "DESK", "DOCTOR", "HOUSEKEEPING"]],
+  ["POST /api/admissions/:id/transfer", "POST", transfer.POST as Handler, ["NURSE"]],
+  ["POST /api/admissions/:id/discharge-step", "POST", dischargeStep.POST as Handler, ["NURSE", "DOCTOR"]],
 ];
 const anyUserRoutes: [string, string, Handler][] = [
   ["POST /api/me/pin", "POST", pin.POST as Handler],
@@ -90,6 +105,24 @@ describe.each(adminRoutes)("%s (ADMIN only)", (_name, method, handler) => {
     loginAs("ADMIN");
     const s = await statusOf(method, handler);
     expect([401, 403]).not.toContain(s);
+  });
+});
+
+describe.each(bedRoutes)("%s", (_name, method, handler, allowed) => {
+  it("401 without a session", async () => {
+    expect(await statusOf(method, handler)).toBe(401);
+  });
+  it("401 for a deactivated user", async () => {
+    loginAs(allowed[0]!, false);
+    expect(await statusOf(method, handler)).toBe(401);
+  });
+  it.each(ROLES.filter((r) => !allowed.includes(r)))("403 for %s", async (role) => {
+    loginAs(role);
+    expect(await statusOf(method, handler)).toBe(403);
+  });
+  it.each(allowed)("%s passes the route guard", async (role) => {
+    loginAs(role);
+    expect([401, 403]).not.toContain(await statusOf(method, handler));
   });
 });
 

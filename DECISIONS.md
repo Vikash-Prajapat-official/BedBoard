@@ -26,6 +26,21 @@ BedBoard is **free open-source software that each hospital installs and runs for
 33. **Hindi strings** are still inline English. Extraction to `messages/*.json` happens in Phase 6 as planned.
 34. **Dashboard** is a placeholder after login (real one is Phase 4).
 
+## Phase 3
+
+35. **Who may do which move** follows the section 4 table literally, including its ambiguous first row, which I read as: FREE to RESERVED and to OCCUPIED by DESK or NURSE, FREE to BLOCKED by NURSE or ADMIN. The API table is stricter for reserve (`POST /reserve` is DESK only), and the route enforces that. Doctors are not limited to wards (only nurses have ward assignments). ADMIN can block and unblock but cannot admit or discharge, as the API table says.
+36. **Every change checks `version` first.** A stale client always gets `409 VERSION_CONFLICT` with the text "Bed changed, please refresh", even when the real cause is that the bed was taken. Without this a losing racer sometimes saw "invalid move" and sometimes "changed", depending on timing. Version is required on every bed action.
+37. **Concurrency** is enforced by one conditional `UPDATE ... WHERE id AND version AND status`, so exactly one of two simultaneous writers matches and the other rolls back completely (no half-created patient). Transactions wait up to 15 s for a connection (Prisma's 2 s default made losers fail with a database timeout instead of a clean 409).
+38. **Admitting:** a UHID can only have one open admission, enforced with a Postgres advisory lock so two beds cannot admit the same patient at once. If the UHID already exists the patient record is reused and updated. Patient sex is **not** matched against ward gender; the desk filters by gender in Find a bed (Phase 4) and blocking a legitimate admission (newborn, emergency) is worse than allowing a mismatch.
+39. **Discharge flow.** Steps: plan, order, summary, bill, meds, left. Giving the **order** also plans the discharge (one tap for the doctor). Summary, bill and meds need the order first and can be un-ticked. **Left** frees the bed into CLEANING and closes the admission; a normal discharge needs the order, but LAMA, REFERRED and DIED do not. "Patient left" cannot be undone. Cancelling a plan clears its checklist. Checklist ticks are audit-logged but are not bed status changes, so they do not bump `version` or write a BedEvent.
+40. **Transfer** is nurse-only, from an OCCUPIED bed (not DISCHARGE_PLANNED: cancel the plan first) to a FREE bed, any ward. The old bed goes to CLEANING, the new one OCCUPIED, a `BedTransfer` row is written. The nurse must be assigned to the source ward.
+41. **Block** needs a reason, shown on the bed. Cancelling a reservation and un-blocking go through `POST /status`.
+42. **Reservation auto-release** runs in the worker every minute and records a BedEvent with no actor ("reservation expired"). A reservation with no deadline counts as expired so it cannot stick.
+43. **Names on the ward map.** Shown to admin, desk, doctor and nurses assigned to that ward. A nurse from another ward sees the beds and statuses but no patients and no actions. Housekeeping and viewers cannot open ward maps (`/wards/:id`); they see counts only. The dashboard, still a placeholder until Phase 4, shows counts only.
+44. **`NOTIFY beds`** is sent inside each change transaction (delivered on commit) with only ids and statuses, no patient data. Nothing listens yet; the SSE fan-out is Phase 4.
+45. **Integration tests need a real Postgres.** `npm test` (unit, 456 tests, no database) is separate from `npm run test:integration` (19 tests: the concurrency test, journey, transfer, roles, expiry). Setup is in the README. CI wiring is Phase 7.
+46. **Not yet in the UI:** offline queue and replay (Phase 5), live refresh (Phase 4: for now screens refresh after your own action), Hindi (Phase 6). The ward map was verified through the API and page rendering, not clicked through in a browser.
+
 ## Phase 1
 
 1. **Spec filename.** The file in the folder is `Spec.md`, not `SPEC.md`. Left as is (Windows is case-insensitive). Rename it before cloning on Linux.

@@ -2,7 +2,7 @@
 
 Free, open-source live bed occupancy and discharge tracker for hospitals. See [Spec.md](Spec.md).
 
-**Status: Phase 2 of 7 (login, roles, PIN, admin setup).**
+**Status: Phase 3 of 7 (bed state machine, ward map, admit, transfer, discharge, cleaning, reservations).**
 
 BedBoard is free software that each hospital installs and runs for itself.
 
@@ -29,6 +29,22 @@ docker compose exec app npx prisma db seed
 Demo logins (password `bedboard123`): admin 9000000001, nurse 9000000002, desk 9000000003, doctor 9000000004, housekeeping 9000000005, viewer 9000000006.
 
 Health check: http://localhost:3001/health. See [DECISIONS.md](DECISIONS.md) for design choices.
+
+## Tests
+
+```bash
+npm test                      # unit tests, no database needed
+```
+
+The integration tests (including the "two nurses admit the same bed at once" test) need a throwaway PostgreSQL:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db     # publishes Postgres on 127.0.0.1:5433
+docker compose exec db createdb -U bedboard bedboard_test
+export TEST_DATABASE_URL=postgresql://bedboard:change-me@localhost:5433/bedboard_test
+DATABASE_URL=$TEST_DATABASE_URL npx prisma migrate deploy
+npm run test:integration
+```
 
 ## Develop without Docker
 

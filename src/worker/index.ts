@@ -1,9 +1,17 @@
 import cron from "node-cron";
-import { PrismaClient } from "@prisma/client";
+import { db } from "../lib/db";
+import { releaseExpiredReservations } from "../lib/bed-service";
 
-// Phase 1: heartbeat only. Reservation expiry, census snapshots and the
+// Reservation expiry runs every minute (Phase 3). Census snapshots and the
 // retention job are added in Phase 5 (see SPEC.md section 5).
-const db = new PrismaClient();
+async function expireReservations() {
+  try {
+    const n = await releaseExpiredReservations();
+    if (n > 0) console.log(`[worker] released ${n} expired reservation(s)`);
+  } catch (err) {
+    console.error("[worker] reservation expiry failed", err);
+  }
+}
 
 async function heartbeat() {
   try {
@@ -14,7 +22,10 @@ async function heartbeat() {
   }
 }
 
-cron.schedule("* * * * *", heartbeat);
+cron.schedule("* * * * *", () => {
+  void heartbeat();
+  void expireReservations();
+});
 console.log("[worker] started");
 void heartbeat();
 
