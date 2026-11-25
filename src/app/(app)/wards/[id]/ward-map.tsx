@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
-import { callApi } from "@/lib/client-api";
+import { callApi, safeRefresh } from "@/lib/client-api";
 import { availableActions, type BedAction } from "@/lib/beds";
 import { STATUS_META } from "@/lib/status";
 import { OUTCOMES } from "@/lib/validation";
@@ -58,15 +58,15 @@ export function WardMapView({ map, role, freeBeds, alertHours }: { map: WardMap;
   async function send(url: string, body: unknown, keepOpen = false) {
     setBusy(true);
     setError("");
-    const r = await callApi(url, "POST", body);
+    const r = await callApi(url, "POST", body, { queue: `${map.ward.name} ${selected?.label ?? "bed"}` });
     setBusy(false);
     if (r.ok) {
       if (!keepOpen) close();
-      router.refresh();
+      void safeRefresh(router);
       return true;
     }
     setError(r.message);
-    if (/refresh/i.test(r.message)) router.refresh();
+    if (/refresh/i.test(r.message)) void safeRefresh(router);
     return false;
   }
 

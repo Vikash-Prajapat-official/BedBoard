@@ -45,5 +45,24 @@ services:
       app:
         condition: service_healthy
 
+  # Nightly encrypted dump of the database into ./backups, kept 14 days (see ADMIN_GUIDE for restoring).
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    entrypoint: ["bash", "/scripts/backup.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: bedboard
+      PGDATABASE: bedboard
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      TZ: ${TZ:-Asia/Kolkata}
+    volumes:
+      - ./backups:/backups
+      - ./backup:/scripts:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   dbdata:

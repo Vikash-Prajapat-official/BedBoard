@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { safeRefresh } from "@/lib/client-api";
 
 type State = "connecting" | "live" | "offline";
 
@@ -20,7 +21,7 @@ export function LiveRefresh({ wardId }: { wardId?: string }) {
     // Several changes in a burst cause one refresh.
     const refresh = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 150);
+      timer = setTimeout(() => void safeRefresh(router), 150);
     };
 
     es.onopen = () => {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { callApi } from "@/lib/client-api";
+import { callApi, safeRefresh } from "@/lib/client-api";
 import { checklistProgress, isOverdue, waitingMinutes } from "@/lib/stats";
 import type { DischargeRow } from "@/lib/bed-queries";
 
@@ -30,11 +30,11 @@ export function DischargeTracker({ rows, canAct, alertHours }: { rows: Discharge
   async function post(r: DischargeRow, body: Record<string, unknown>) {
     setBusy(r.admissionId);
     setError("");
-    const res = await callApi(`/api/admissions/${r.admissionId}/discharge-step`, "POST", body);
+    const res = await callApi(`/api/admissions/${r.admissionId}/discharge-step`, "POST", body, { queue: `Discharge ${r.bed.wardName} ${r.bed.label}` });
     setBusy(null);
     setConfirming(null);
     if (!res.ok) setError(res.message);
-    router.refresh();
+    void safeRefresh(router);
   }
 
   if (rows.length === 0) return <p className="rounded-xl border bg-white p-6 text-center text-slate-700">No discharge orders waiting.</p>;

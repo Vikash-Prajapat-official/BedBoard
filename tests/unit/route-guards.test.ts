@@ -32,6 +32,12 @@ import * as beds from "@/app/api/admin/beds/route";
 import * as bed from "@/app/api/admin/beds/[id]/route";
 import * as users from "@/app/api/admin/users/route";
 import * as user from "@/app/api/admin/users/[id]/route";
+import * as repOcc from "@/app/api/reports/occupancy/route";
+import * as repLos from "@/app/api/reports/los/route";
+import * as repTurn from "@/app/api/reports/turnover/route";
+import * as repCensus from "@/app/api/reports/census/route";
+import * as expAdm from "@/app/api/export/admissions.csv/route";
+import * as expCensus from "@/app/api/export/census.csv/route";
 import * as search from "@/app/api/beds/search/route";
 import * as dashboard from "@/app/api/dashboard/route";
 import * as stream from "@/app/api/stream/route";
@@ -47,6 +53,12 @@ import * as pinVerify from "@/app/api/me/pin/verify/route";
 type Handler = (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response> | Response;
 
 const adminRoutes: [string, string, Handler][] = [
+  ["GET /api/reports/occupancy", "GET", repOcc.GET as Handler],
+  ["GET /api/reports/los", "GET", repLos.GET as Handler],
+  ["GET /api/reports/turnover", "GET", repTurn.GET as Handler],
+  ["GET /api/reports/census", "GET", repCensus.GET as Handler],
+  ["GET /api/export/admissions.csv", "GET", expAdm.GET as Handler],
+  ["GET /api/export/census.csv", "GET", expCensus.GET as Handler],
   ["GET /api/admin/wards", "GET", wards.GET as Handler],
   ["POST /api/admin/wards", "POST", wards.POST as Handler],
   ["PATCH /api/admin/wards/:id", "PATCH", ward.PATCH as Handler],

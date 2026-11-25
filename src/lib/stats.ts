@@ -46,6 +46,14 @@ function zoneOffsetMs(d: Date, timeZone: string): number {
   return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(d.getTime() / 1000) * 1000;
 }
 
+/** The instant the local calendar date "YYYY-MM-DD" begins in `timeZone`. DST-safe. */
+export function startOfLocalDate(date: string, timeZone: string): Date {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const guess = Date.UTC(y, m - 1, d);
+  const first = guess - zoneOffsetMs(new Date(guess), timeZone);
+  return new Date(guess - zoneOffsetMs(new Date(first), timeZone));
+}
+
 /** The instant the next calendar day starts in `timeZone` (exclusive end of "today"). DST-safe. */
 export function endOfLocalDay(now: Date, timeZone: string): Date {
   const p = zonedParts(now, timeZone);

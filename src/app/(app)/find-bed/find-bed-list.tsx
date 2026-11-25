@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { callApi } from "@/lib/client-api";
+import { callApi, safeRefresh } from "@/lib/client-api";
 import { STATUS_META } from "@/lib/status";
 import type { FoundBed, ReservedBed } from "@/lib/bed-queries";
 
@@ -24,12 +24,13 @@ export function FindBedList({ beds, reserved, reservationMinutes }: { beds: Foun
     setMsg(null);
     const r =
       kind === "reserve"
-        ? await callApi(`/api/beds/${bed.id}/reserve`, "POST", { version: bed.version })
-        : await callApi(`/api/beds/${bed.id}/status`, "POST", { to: "FREE", version: bed.version });
+        ? await callApi(`/api/beds/${bed.id}/reserve`, "POST", { version: bed.version }, { queue: `Reserve ${label}` })
+        : await callApi(`/api/beds/${bed.id}/status`, "POST", { to: "FREE", version: bed.version }, { queue: `Release ${label}` });
     setBusy(null);
-    if (r.ok) setMsg({ ok: true, text: kind === "reserve" ? `${label} reserved for ${reservationMinutes} minutes` : `${label} released` });
+    if (r.ok && r.queued) setMsg({ ok: true, text: `${label}: saved on this phone, it will be sent when you are back online` });
+    else if (r.ok) setMsg({ ok: true, text: kind === "reserve" ? `${label} reserved for ${reservationMinutes} minutes` : `${label} released` });
     else setMsg({ ok: false, text: r.message });
-    router.refresh();
+    void safeRefresh(router);
   }
 
   const left = (iso: string | null) => (iso && now !== null ? Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 60_000)) : null);

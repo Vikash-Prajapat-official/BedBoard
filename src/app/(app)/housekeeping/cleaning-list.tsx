@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { callApi } from "@/lib/client-api";
+import { callApi, safeRefresh } from "@/lib/client-api";
 import { STATUS_META } from "@/lib/status";
 import { waitingMinutes } from "@/lib/stats";
 import type { Role } from "@/lib/constants";
@@ -27,10 +27,10 @@ export function CleaningList({ beds, role, wardIds }: { beds: CleaningBed[]; rol
   async function clean(b: CleaningBed) {
     setBusy(b.id);
     setError("");
-    const r = await callApi(`/api/beds/${b.id}/status`, "POST", { to: "FREE", version: b.version });
+    const r = await callApi(`/api/beds/${b.id}/status`, "POST", { to: "FREE", version: b.version }, { queue: `Clean ${b.wardName} ${b.label}` });
     setBusy(null);
     if (!r.ok) setError(r.message);
-    router.refresh();
+    void safeRefresh(router);
   }
 
   if (beds.length === 0) return <p className="rounded-xl border bg-white p-6 text-center text-slate-700">All beds are clean. Nothing waiting.</p>;

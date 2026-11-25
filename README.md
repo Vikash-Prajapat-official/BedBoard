@@ -2,7 +2,7 @@
 
 Free, open-source live bed occupancy and discharge tracker for hospitals. See [Spec.md](Spec.md).
 
-**Status: Phase 4 of 7 (live updates, dashboard, find a bed, discharge tracker, housekeeping list).**
+**Status: Phase 5 of 7 (reports, CSV, census, retention, encrypted backups, idle lock, offline queue, audit log).**
 
 BedBoard is free software that each hospital installs and runs for itself.
 
@@ -16,6 +16,18 @@ docker compose up -d --build
 Open http://localhost:3001. On first start you are taken to a setup page where you enter your hospital name and create the first administrator. Then add wards, beds (bulk add, for example "Bed 1 to 30") and staff logins under **Admin**.
 
 The app will not start if `AUTH_SECRET` is missing, shorter than 32 characters, or still the sample value.
+
+## Backups
+
+A `backup` container writes an encrypted copy of the database to `./backups` every night at 02:30 and keeps 14 days. Set a strong `BACKUP_PASSPHRASE` (12+ characters) in `.env`; without it the backup container refuses to run. **Keep a copy of the passphrase somewhere other than this server, and copy the `backups` folder to another disk or machine regularly.** A backup on the same computer does not survive that computer failing.
+
+```bash
+docker compose exec backup bash /scripts/backup.sh once                      # take one now
+docker compose exec backup bash /scripts/restore.sh /backups/<file> --check  # prove a file opens
+docker compose exec backup bash /scripts/restore.sh /backups/<file>          # restore into a NEW database "bedboard_restore"
+```
+
+On Windows Git Bash, prefix the commands with `MSYS_NO_PATHCONV=1`.
 
 ## Try the demo instead
 
